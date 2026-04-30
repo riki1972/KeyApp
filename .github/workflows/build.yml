@@ -11,16 +11,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      - name: Set up JDK 17
+      - name: Set up JDK 11
         uses: actions/setup-java@v4
         with:
-          java-version: '17'
+          java-version: '11'
           distribution: 'temurin'
       
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v4
         with:
-          python-version: '3.9'  # Versione stabile confermata
+          python-version: '3.8.17'
           
       - name: Install system dependencies
         run: |
@@ -35,31 +35,42 @@ jobs:
           
       - name: Create buildozer.spec
         run: |
-          echo '[app]' > buildozer.spec
-          echo 'title = Keygen Zebra' >> buildozer.spec
-          echo 'package.name = keygenzebra' >> buildozer.spec
-          echo 'package.domain = org.example' >> buildozer.spec
-          echo 'source.dir = .' >> buildozer.spec
-          echo 'source.include_exts = py,png,jpg,kv,atlas' >> buildozer.spec
-          echo 'version = 0.1' >> buildozer.spec
-          echo 'requirements = python3,kivy' >> buildozer.spec
-          echo 'orientation = portrait' >> buildozer.spec
-          echo 'fullscreen = 0' >> buildozer.spec
-          echo 'android.accept_sdk_license = True' >> buildozer.spec
-          echo 'android.api = 33' >> buildozer.spec
-          echo 'android.minapi = 21' >> buildozer.spec
-          echo 'android.ndk = 25b' >> buildozer.spec
-          echo 'android.sdk = 24' >> buildozer.spec
-          echo 'android.archs = armeabi-v7a' >> buildozer.spec
-          echo '' >> buildozer.spec
-          echo '[buildozer]' >> buildozer.spec
-          echo 'log_level = 2' >> buildozer.spec
-          echo 'warn_on_root = 1' >> buildozer.spec
+          cat > buildozer.spec << 'EOF'
+[app]
+title = Keygen Zebra
+package.name = keygenzebra
+package.domain = org.example
+source.dir = .
+source.include_exts = py,png,jpg,kv,atlas
+version = 0.1
+requirements = python3,kivy
+orientation = portrait
+fullscreen = 0
+android.accept_sdk_license = True
+android.api = 30
+android.minapi = 21
+android.ndk = 23b
+android.sdk = 24
+android.archs = armeabi-v7a
+android.ndk_path = 
+
+[buildozer]
+log_level = 2
+warn_on_root = 1
+EOF
+          
+      - name: Fix Python environment
+        run: |
+          # Forza la reinstallazione di certifi (problema comune)
+          pip install --upgrade certifi
           
       - name: Build APK
         run: |
           export PATH=$HOME/.local/bin:$PATH
-          buildozer android debug
+          # Pulisci build precedenti
+          buildozer android clean
+          # Avvia la build
+          buildozer -v android debug
           
       - name: Upload APK
         uses: actions/upload-artifact@v4
