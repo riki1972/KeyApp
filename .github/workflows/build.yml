@@ -1,0 +1,68 @@
+name: Build APK
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      
+      # 1. Installa Java (richiesto per Android)
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+      
+      # 2. Installa Python
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          
+      # 3. Installa le dipendenze di sistema per Buildozer
+      - name: Install system dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y git zip unzip autoconf libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5 cmake libffi-dev libssl-dev
+          
+      # 4. Installa Buildozer e Cython
+      - name: Install buildozer & cython
+        run: |
+          pip install --upgrade pip
+          pip install cython==0.29.19 buildozer
+          
+      # 5. Configura l'Android SDK e installa gli strumenti necessari (incl. AIDL)
+      - name: Setup Android SDK and install AIDL
+        run: |
+          # Inizializza Buildozer per creare la struttura delle cartelle
+          buildozer init
+          
+          # Usa sdkmanager per installare i build-tools, che contengono AIDL
+          # Accetta automaticamente le licenze (yes |)
+          yes | ~/.buildozer/android/platform/android-sdk/tools/bin/sdkmanager "platform-tools" "platforms;android-31" "build-tools;31.0.0"
+          
+          # Aggiungi i build-tools al PATH così Buildozer può trovare 'aidl'
+          echo "$HOME/.buildozer/android/platform/android-sdk/build-tools/31.0.0" >> $GITHUB_PATH
+      
+      # 6. Verifica che AIDL sia stato installato correttamente (utile per il debug)
+      - name: Verify AIDL installation
+        run: |
+          which aidl
+          aidl --version
+          
+      # 7. Avvia la build dell'APK
+      - name: Build APK
+        run: |
+          buildozer android debug
+          
+      # 8. Carica l'APK come artefatto
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-debug
+          path: bin/*.apk
