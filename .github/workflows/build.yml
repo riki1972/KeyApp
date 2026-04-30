@@ -34,20 +34,24 @@ jobs:
           
       - name: Configure Buildozer
         run: |
-          # Crea un file buildozer.spec con le impostazioni corrette se non esiste
           if [ ! -f buildozer.spec ]; then
             buildozer init
           fi
-          # Modifica lo spec per evitare download non necessari e accettare licenze
+          # Modifiche per stabilità
           sed -i 's/# android.accept_sdk_license = False/android.accept_sdk_license = True/' buildozer.spec
           sed -i 's/# android.ndk = .*/android.ndk = 23b/' buildozer.spec
           sed -i 's/# android.sdk = .*/android.sdk = 24/' buildozer.spec
           sed -i 's/# android.api = .*/android.api = 31/' buildozer.spec
           sed -i 's/# android.minapi = .*/android.minapi = 21/' buildozer.spec
+          # Aggiunte per evitare errori comuni
+          echo "android.gradle_repository = true" >> buildozer.spec
+          echo "android.cmake = True" >> buildozer.spec
           
-      - name: Build APK
-        run: buildozer -v android debug
-        
+      - name: Build APK with more memory
+        run: |
+          export GRADLE_OPTS="-Xmx2048m"
+          buildozer -v android debug
+          
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
